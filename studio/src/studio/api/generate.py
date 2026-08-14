@@ -360,7 +360,7 @@ async def generate_article(
             response = await llm.chat.completions.create(
                 model=use_model,
                 messages=[
-                    {"role": "system", "content": "你是FORGE AI助手，专注于AI行业分析和洞察。用中文回答，内容专业且有深度。直接回答问题，不要有开头寒暄或自我介绍。"},
+                    {"role": "system", "content": "你是Ember AI助手，专注于AI行业分析和洞察。用中文回答，内容专业且有深度。直接回答问题，不要有开头寒暄或自我介绍。"},
                     {"role": "user", "content": body.prompt},
                 ],
                 stream=True,
@@ -384,7 +384,7 @@ async def generate_article(
     }
     structure = outline_types.get(body.output_type, "概览→分析→结论")
 
-    system = f"""你是FORGE深度内容引擎。撰写{body.output_type}。
+    system = f"""你是Ember深度内容引擎。撰写{body.output_type}。
 结构: {structure}
 语言: {'中文' if body.language == 'zh' else 'English'}
 要求: 数据驱动, 有深度洞察, 标注来源

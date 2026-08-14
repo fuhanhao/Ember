@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     rate_limit_window: int = 10
 
     # App
-    app_name: str = "FORGE Mine"
+    app_name: str = "Ember Mine"
     debug: bool = False
 
     # Celery

@@ -89,7 +89,7 @@ def rule_based_tag(title: str, content: str | None, media_type: str | None) -> d
         "content_signal": content_signal,
     }
 
-SYSTEM_PROMPT = """你是FORGE数据引擎的标签分析模块。判断文章是否与AI/人工智能相关，并对AI领域文章做分类和标签提取。仅输出JSON。"""
+SYSTEM_PROMPT = """你是Ember数据引擎的标签分析模块。判断文章是否与AI/人工智能相关，并对AI领域文章做分类和标签提取。仅输出JSON。"""
 
 USER_PROMPT_TEMPLATE = """来源: {source_name}
 标题: {title}

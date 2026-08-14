@@ -154,7 +154,7 @@ async def get_daily_insight(
         article_lines.append(f"- [{cat}] {a['title']} (重要性:{a.get('importance_score', 0):.2f})")
     articles_text = "\n".join(article_lines)
 
-    prompt = f"""你是 FORGE 平台的资深 AI 行业编辑。请根据以下今日 AI 资讯标题，用中文写一句「今日洞察」。
+    prompt = f"""你是 Ember 平台的资深 AI 行业编辑。请根据以下今日 AI 资讯标题，用中文写一句「今日洞察」。
 
 今日资讯：
 {articles_text}
@@ -324,7 +324,7 @@ async def get_daily_briefing(
 
     all_blocks = "\n\n".join(category_blocks)
 
-    prompt = f"""你是 FORGE 平台的资深 AI 行业编辑。请根据以下 {brief_date.isoformat()} 的 AI 资讯，生成一份「AI 昨日日报」。
+    prompt = f"""你是 Ember 平台的资深 AI 行业编辑。请根据以下 {brief_date.isoformat()} 的 AI 资讯，生成一份「AI 昨日日报」。
 
 {all_blocks}
 

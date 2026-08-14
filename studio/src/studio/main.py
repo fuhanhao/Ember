@@ -37,4 +37,4 @@ app.include_router(generated_router, prefix="/api/v1")
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "forge-studio"}
+    return {"status": "ok", "service": "ember-studio"}

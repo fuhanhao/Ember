@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     jwt_refresh_expire_days: int = 30
 
     # App
-    app_name: str = "FORGE Studio"
+    app_name: str = "Ember Studio"
     debug: bool = False
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}

@@ -5,4 +5,4 @@ router = APIRouter()
 
 @router.get("/health")
 async def health():
-    return {"status": "ok", "service": "forge-mine"}
+    return {"status": "ok", "service": "ember-mine"}
