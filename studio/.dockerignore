@@ -1,0 +1,12 @@
+# Python
+**/__pycache__/
+*.pyc
+
+# Web subproject (built by its own Dockerfile)
+web/node_modules/
+web/.next/
+web/.git/
+
+# Misc
+.git/
+.env

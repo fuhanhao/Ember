@@ -1,0 +1,246 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================
+   Ember — warm dark design system
+   Default theme is DARK: ember glow on slag charcoal.
+   Light companion: warm ivory for daytime reading.
+   ============================================================ */
+
+:root {
+  --canvas: #faf6f0;
+  --surface: #ffffff;
+  --surface-2: #f3ece1;
+  --edge: #e7dcc9;
+  --edge-strong: #d4c4a8;
+  --ink: #33291f;
+  --muted: #84735f;
+  --faint: #b7a68e;
+
+  --accent: #c75f2e;
+  --accent-strong: #b04e22;
+  --accent-soft: rgba(199, 95, 46, 0.12);
+  --accent-glow: rgba(199, 95, 46, 0.20);
+
+  --gold: #b98a2f;
+  --steel: #8a6d3b;
+  --ok: #6f9654;
+  --danger: #c24b33;
+  --warn: #d99a2b;
+
+  --gradient: linear-gradient(120deg, #c75f2e 0%, #e0a45c 100%);
+  --gradient-soft: linear-gradient(180deg, #f6efe3, #faf6f0);
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow-card: 0 1px 2px rgba(51, 41, 31, 0.05), 0 6px 16px -8px rgba(51, 41, 31, 0.12);
+  --shadow-lift: 0 2px 4px rgba(51, 41, 31, 0.06), 0 14px 30px -12px rgba(51, 41, 31, 0.18);
+}
+
+.dark {
+  --canvas: #17120e;
+  --surface: #211a13;
+  --surface-2: #2b2218;
+  --edge: #3a2e1f;
+  --edge-strong: #4a3b28;
+  --ink: #f3e9da;
+  --muted: #a08d74;
+  --faint: #6e5f4b;
+
+  --accent: #e0703a;
+  --accent-strong: #f08a52;
+  --accent-soft: rgba(224, 112, 58, 0.14);
+  --accent-glow: rgba(224, 112, 58, 0.28);
+
+  --gold: #e0a45c;
+  --steel: #e5b87c;
+  --ok: #7fa05c;
+  --danger: #c84b33;
+  --warn: #d9a441;
+
+  --gradient: linear-gradient(120deg, #e0703a 0%, #f0b34a 100%);
+  --gradient-soft: linear-gradient(135deg, rgba(224, 112, 58, 0.12), rgba(240, 179, 74, 0.05));
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 20px -8px rgba(0, 0, 0, 0.45);
+  --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.4), 0 16px 34px -12px rgba(0, 0, 0, 0.55);
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans), "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-geist-sans), "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "Cascadia Code", Consolas, monospace;
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-edge: var(--edge);
+  --color-edge-strong: var(--edge-strong);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-glow: var(--accent-glow);
+  --color-gold: var(--gold);
+  --color-steel: var(--steel);
+  --color-ok: var(--ok);
+  --color-danger: var(--danger);
+  --color-warn: var(--warn);
+}
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+a { text-decoration: none; color: inherit; }
+button { font-family: inherit; }
+
+/* Thin, quiet scrollbars */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--faint) 45%, transparent); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--faint) 70%, transparent); }
+* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--faint) 45%, transparent) transparent; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------- Reusable components ---------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+}
+
+.card-hover {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.card-hover:hover {
+  border-color: var(--edge-strong);
+  box-shadow: var(--shadow-lift);
+  transform: translateY(-1px);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1;
+  padding: 10px 18px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease, transform 0.1s ease;
+  user-select: none;
+}
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 4px 14px -6px var(--accent-glow);
+}
+.btn-primary:hover:not(:disabled) { background: var(--accent-strong); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--edge-strong);
+}
+.btn-ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+.input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.input::placeholder { color: var(--faint); }
+.input:focus { border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--surface-2);
+  color: var(--muted);
+  border: 1px solid var(--edge);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.chip:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.chip-active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chip-active:hover { background: var(--accent-strong); color: #fff; }
+
+.kicker {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.nav-pill {
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--muted);
+  transition: all 0.18s ease;
+}
+.nav-pill:hover { color: var(--ink); background: var(--surface-2); }
+.nav-pill-active { background: var(--accent); color: #fff; }
+.nav-pill-active:hover { background: var(--accent-strong); color: #fff; }
+
+/* Workspace canvas dot grid */
+.canvas-grid {
+  background-color: var(--canvas);
+  background-image: radial-gradient(color-mix(in srgb, var(--faint) 24%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.fade-in { animation: fadeIn 0.2s ease-out; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Ember heat gradient for brand marks and heat bars */
+.text-ember {
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

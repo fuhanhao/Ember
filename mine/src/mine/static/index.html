@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FORGE Mine 数据引擎</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0f; color: #e0e0e0; }
+
+  /* Layout */
+  .header { background: #111118; border-bottom: 1px solid #222; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 20px; font-weight: 600; color: #fff; }
+  .header h1 span { color: #6c5ce7; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+  .status-dot.ok { background: #00b894; }
+  .status-dot.err { background: #e17055; }
+  .header-right { display: flex; align-items: center; gap: 16px; font-size: 13px; color: #888; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  /* Stats Cards */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: #16161e; border: 1px solid #222; border-radius: 10px; padding: 20px; }
+  .stat-card .label { font-size: 12px; color: #888; letter-spacing: 1px; margin-bottom: 8px; }
+  .stat-card .value { font-size: 28px; font-weight: 700; color: #fff; }
+  .stat-card .value.purple { color: #6c5ce7; }
+  .stat-card .value.green { color: #00b894; }
+  .stat-card .value.blue { color: #0984e3; }
+  .stat-card .value.orange { color: #e17055; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; }
+  .tab { padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; background: transparent; border: 1px solid #333; color: #888; transition: all 0.2s; }
+  .tab.active { background: #6c5ce7; border-color: #6c5ce7; color: #fff; }
+  .tab:hover:not(.active) { border-color: #555; color: #ccc; }
+
+  /* Panel */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 10px 12px; font-size: 11px; letter-spacing: 1px; color: #666; border-bottom: 1px solid #222; }
+  td { padding: 12px; border-bottom: 1px solid #1a1a22; font-size: 13px; }
+  tr:hover td { background: #1a1a24; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+  .badge-t1 { background: #6c5ce720; color: #a29bfe; }
+  .badge-t2 { background: #0984e320; color: #74b9ff; }
+  .badge-t3 { background: #fdcb6e20; color: #ffeaa7; }
+  .badge-t4 { background: #e1705520; color: #fab1a0; }
+  .badge-cat { background: #00b89420; color: #55efc4; }
+  .tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; background: #2d2d3a; color: #b0b0c0; margin: 1px 2px; }
+  .score-bar { width: 60px; height: 6px; background: #222; border-radius: 3px; overflow: hidden; display: inline-block; vertical-align: middle; margin-right: 6px; }
+  .score-fill { height: 100%; border-radius: 3px; }
+  .enabled { color: #00b894; }
+  .disabled { color: #e17055; }
+  a { color: #74b9ff; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Filters */
+  .filters { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .filters select, .filters input { background: #16161e; border: 1px solid #333; color: #e0e0e0; padding: 6px 12px; border-radius: 6px; font-size: 13px; }
+  .filters select:focus, .filters input:focus { outline: none; border-color: #6c5ce7; }
+  .btn { padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; border: none; }
+  .btn-primary { background: #6c5ce7; color: #fff; }
+  .btn-primary:hover { background: #5a4bd1; }
+  .btn-ghost { background: transparent; border: 1px solid #333; color: #888; }
+  .btn-ghost:hover { border-color: #555; color: #ccc; }
+
+  /* Categories chart */
+  .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .cat-item { background: #16161e; border: 1px solid #222; border-radius: 8px; padding: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .cat-item .cat-name { font-size: 13px; color: #ccc; }
+  .cat-item .cat-count { font-size: 18px; font-weight: 600; color: #6c5ce7; }
+
+  /* Article detail modal */
+  .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100; justify-content: center; align-items: center; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: #16161e; border: 1px solid #333; border-radius: 12px; max-width: 760px; width: 90%; max-height: 85vh; overflow-y: auto; padding: 32px; }
+  .modal h2 { font-size: 20px; margin-bottom: 16px; color: #fff; line-height: 1.5; font-weight: 600; }
+  .modal .meta { font-size: 12px; color: #888; margin-bottom: 16px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+  .modal .meta a { color: #6c5ce7; text-decoration: none; }
+  .modal .meta a:hover { text-decoration: underline; }
+  .modal .content { font-size: 15px; line-height: 1.9; color: #d0d0d0; word-break: break-word; }
+  .modal .content p { margin-bottom: 14px; text-indent: 2em; }
+  .modal .content p:last-child { margin-bottom: 0; }
+  .modal .content blockquote { border-left: 3px solid #6c5ce7; padding-left: 14px; margin: 16px 0; color: #aaa; font-style: italic; }
+  .modal .content h3, .modal .content h4 { color: #fff; margin: 20px 0 10px; font-weight: 600; }
+  .modal .content ul, .modal .content ol { margin: 12px 0; padding-left: 2em; }
+  .modal .content li { margin-bottom: 6px; }
+  .modal .content code { background: #222; padding: 2px 6px; border-radius: 4px; font-size: 13px; color: #e0e0e0; }
+  .modal .source-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 20px; padding: 10px 18px; background: #6c5ce722; border: 1px solid #6c5ce744; border-radius: 8px; color: #6c5ce7; font-size: 13px; text-decoration: none; transition: background 0.2s; }
+  .modal .source-link:hover { background: #6c5ce733; }
+  .modal-close { float: right; cursor: pointer; font-size: 20px; color: #666; background: none; border: none; }
+  .modal-close:hover { color: #fff; }
+
+  /* Date bar */
+  .date-btn { display:flex; flex-direction:column; align-items:center; padding:8px 12px; border-radius:8px; border:1px solid #333; background:#16161e; cursor:pointer; min-width:70px; transition:all 0.2s; }
+  .date-btn:hover { border-color:#6c5ce7; background:#1e1e2e; }
+  .date-btn.active { border-color:#6c5ce7; background:#6c5ce722; }
+  .date-btn .day { font-size:14px; font-weight:600; color:#fff; }
+  .date-btn .weekday { font-size:10px; color:#888; margin-bottom:2px; }
+  .date-btn .count { font-size:11px; color:#6c5ce7; font-weight:500; margin-top:2px; }
+
+  /* Pagination */
+  .pagination { display: flex; gap: 8px; margin-top: 16px; justify-content: center; align-items: center; }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 60px 20px; color: #555; }
+  .empty p { margin-bottom: 8px; }
+
+  /* Source form */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .form-grid.full { grid-template-columns: 1fr; }
+  .form-group label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; }
+  .form-group input, .form-group select { width: 100%; background: #0a0a0f; border: 1px solid #333; color: #e0e0e0; padding: 8px 12px; border-radius: 6px; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span>FORGE</span> Mine 数据引擎</h1>
+  <div class="header-right">
+    <span><span class="status-dot" id="statusDot"></span><span id="statusText">检测中...</span></span>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card"><div class="label">文章总数</div><div class="value purple" id="statTotal">-</div></div>
+    <div class="stat-card"><div class="label">今日新增</div><div class="value green" id="statToday">-</div></div>
+    <div class="stat-card"><div class="label">数据源</div><div class="value blue" id="statSources">-</div></div>
+    <div class="stat-card"><div class="label">分类数</div><div class="value orange" id="statCategories">-</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" data-tab="articles">文章列表</div>
+    <div class="tab" data-tab="hot">热门排行</div>
+    <div class="tab" data-tab="sources">数据源</div>
+    <div class="tab" data-tab="categories">分类统计</div>
+    <div class="tab" data-tab="monitor">系统监控</div>
+    <div class="tab" data-tab="x-tokens">X Tokens</div>
+    <div class="tab" data-tab="apify-keys">Apify Keys</div>
+    <div class="tab" data-tab="add-source">+ 添加数据源</div>
+  </div>
+
+  <!-- Articles Panel -->
+  <div class="panel active" id="panel-articles">
+    <!-- Date selector bar -->
+    <div id="datebar" style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px"></div>
+    <div class="filters">
+      <select id="filterCategory"><option value="">全部分类</option></select>
+      <select id="filterSource"><option value="">全部来源</option></select>
+      <input type="number" id="filterImportance" placeholder="最低分数" step="0.1" min="0" max="1" style="width:130px">
+      <button class="btn btn-primary" onclick="loadArticles()">筛选</button>
+      <button class="btn btn-ghost" onclick="resetFilters()">重置</button>
+    </div>
+    <input type="hidden" id="filterDate">
+    <table>
+      <thead><tr><th>标题</th><th>来源</th><th>分类</th><th>标签</th><th>评分</th><th>发布时间</th></tr></thead>
+      <tbody id="articlesBody"></tbody>
+    </table>
+    <div class="pagination" id="articlesPagination"></div>
+  </div>
+
+  <!-- Hot Panel -->
+  <div class="panel" id="panel-hot">
+    <div class="filters">
+      <select id="hotHours">
+        <option value="6">最近 6 小时</option>
+        <option value="12">最近 12 小时</option>
+        <option value="24" selected>最近 24 小时</option>
+        <option value="72">最近 3 天</option>
+        <option value="168">最近 7 天</option>
+      </select>
+      <button class="btn btn-primary" onclick="loadHot()">刷新</button>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>标题</th><th>来源</th><th>分类</th><th>评分</th></tr></thead>
+      <tbody id="hotBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Sources Panel -->
+  <div class="panel" id="panel-sources">
+    <table>
+      <thead><tr><th>ID</th><th>名称</th><th>区域</th><th>等级</th><th>采集器</th><th>采集间隔</th><th>状态</th></tr></thead>
+      <tbody id="sourcesBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Categories Panel -->
+  <div class="panel" id="panel-categories">
+    <div class="cat-grid" id="catGrid"></div>
+  </div>
+
+  <!-- Monitor Panel -->
+  <div class="panel" id="panel-monitor">
+    <div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+      <div class="stat-card"><div class="label">原始文章</div><div class="value blue" id="monRaw">-</div></div>
+      <div class="stat-card"><div class="label">已标签化</div><div class="value green" id="monTagged">-</div></div>
+      <div class="stat-card"><div class="label">待处理</div><div class="value orange" id="monPending">-</div></div>
+      <div class="stat-card"><div class="label">标签化率</div><div class="value purple" id="monRate">-</div></div>
+    </div>
+    <div style="display:flex;gap:12px;margin-bottom:16px">
+      <h3 style="color:#fff;flex:1">数据源健康状态</h3>
+      <button class="btn btn-ghost" onclick="retryAllFailed()">重试全部失败</button>
+    </div>
+    <table>
+      <thead><tr><th>名称</th><th>等级</th><th>文章数</th><th>标签率</th><th>上次采集</th><th>状态</th></tr></thead>
+      <tbody id="monitorBody"></tbody>
+    </table>
+    <h3 style="color:#fff;margin:24px 0 12px">未标签化文章</h3>
+    <table>
+      <thead><tr><th>标题</th><th>来源</th><th>采集时间</th><th>操作</th></tr></thead>
+      <tbody id="failedBody"></tbody>
+    </table>
+  </div>
+
+  <!-- X Tokens Panel -->
+  <div class="panel" id="panel-x-tokens">
+    <div style="display:flex;gap:12px;margin-bottom:16px;align-items:center">
+      <h3 style="color:#fff;flex:1">X (Twitter) Auth Token 管理 <span id="xTokenSummary" style="font-size:13px;color:#888;font-weight:400"></span></h3>
+      <button class="btn btn-primary" onclick="applyXTokens()" id="applyBtn">应用并重启 RSSHub</button>
+    </div>
+    <p style="font-size:12px;color:#666;margin-bottom:16px">获取方式：登录 X → 浏览器 DevTools → Application → Cookies → <code style="color:#6c5ce7">auth_token</code></p>
+    <div class="filters" style="margin-bottom:16px">
+      <input id="xTokenInput" placeholder="粘贴 auth_token（约40位十六进制）" style="width:400px">
+      <input id="xTokenLabel" placeholder="备注（可选）" style="width:160px">
+      <button class="btn btn-primary" onclick="addXToken()">添加</button>
+    </div>
+    <div id="xApplyResult" style="margin-bottom:12px;font-size:13px"></div>
+    <table>
+      <thead><tr><th>ID</th><th>Token</th><th>备注</th><th>状态</th><th>添加时间</th><th>上次检测</th><th>操作</th></tr></thead>
+      <tbody id="xTokensBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Apify Keys Panel -->
+  <div class="panel" id="panel-apify-keys">
+    <div style="display:flex;gap:12px;margin-bottom:16px;align-items:center">
+      <h3 style="color:#fff;flex:1">Apify API Key 池 <span id="apifyKeySummary" style="font-size:13px;color:#888;font-weight:400"></span></h3>
+      <button class="btn btn-ghost" onclick="testAllApifyKeys()">测试全部</button>
+    </div>
+    <!-- Add single -->
+    <div class="filters" style="margin-bottom:16px">
+      <input id="apifyKeyInput" placeholder="粘贴 Apify API Key" style="width:320px">
+      <input id="apifyKeyLabel" placeholder="备注（可选）" style="width:160px">
+      <button class="btn btn-primary" onclick="addApifyKey()">添加</button>
+    </div>
+    <!-- Batch add -->
+    <div style="margin-bottom:16px">
+      <textarea id="apifyKeyBatch" rows="3" placeholder="批量添加：每行一个 API Key" style="width:100%;max-width:600px;background:#16161e;border:1px solid #333;color:#e0e0e0;padding:8px 12px;border-radius:6px;font-size:13px;font-family:monospace;resize:vertical"></textarea>
+      <div style="margin-top:6px"><button class="btn btn-ghost" onclick="batchAddApifyKeys()">批量添加</button> <span id="apifyBatchResult" style="font-size:13px;margin-left:8px"></span></div>
+    </div>
+    <div id="apifyTestResult" style="margin-bottom:12px;font-size:13px"></div>
+    <!-- Table -->
+    <table>
+      <thead><tr><th>ID</th><th>Key</th><th>备注</th><th>状态</th><th>上次使用</th><th>添加时间</th><th>操作</th></tr></thead>
+      <tbody id="apifyKeysBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Add Source Panel -->
+  <div class="panel" id="panel-add-source">
+    <div style="max-width:500px">
+      <h3 style="margin-bottom:16px;color:#fff">添加数据源</h3>
+      <div class="form-grid">
+        <div class="form-group"><label>ID</label><input id="srcId" placeholder="如 G-MEDIA-001"></div>
+        <div class="form-group"><label>名称</label><input id="srcName" placeholder="如 TechCrunch"></div>
+        <div class="form-group">
+          <label>区域</label>
+          <select id="srcRegion"><option value="global">国际</option><option value="china">中国</option></select>
+        </div>
+        <div class="form-group">
+          <label>等级</label>
+          <select id="srcTier"><option value="t1">T1 (1.0)</option><option value="t2">T2 (0.7)</option><option value="t3">T3 (0.4)</option><option value="t4">T4 (0.2)</option></select>
+        </div>
+        <div class="form-group">
+          <label>采集器类型</label>
+          <select id="srcCrawler">
+            <option value="rss">rss</option><option value="github_api">github_api</option><option value="x_api">x_api</option>
+            <option value="wechat">wechat</option><option value="web_scrape">web_scrape</option><option value="hn_api">hn_api</option>
+            <option value="hf_api">hf_api</option><option value="reddit_api">reddit_api</option><option value="podcast_rss">podcast_rss</option>
+            <option value="email_imap">email_imap</option><option value="discord_api">discord_api</option>
+          </select>
+        </div>
+        <div class="form-group"><label>采集间隔（秒）</label><input id="srcInterval" type="number" value="3600"></div>
+      </div>
+      <div class="form-grid full">
+        <div class="form-group"><label>采集器配置（JSON）</label><input id="srcConfig" placeholder='{"feed_url": "https://..."}' value="{}"></div>
+      </div>
+      <button class="btn btn-primary" onclick="addSource()" style="margin-top:8px">添加</button>
+      <span id="addResult" style="margin-left:12px;font-size:13px"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <h2 id="modalTitle"></h2>
+    <div class="meta" id="modalMeta"></div>
+    <div id="modalTags" style="margin-bottom:12px"></div>
+    <div class="content" id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+const API = '/mine/v1';
+let currentPage = 1;
+let sourceMap = {}; // id -> name
+
+// --- Init ---
+async function init() {
+  document.getElementById('filterDate').value = new Date().toISOString().slice(0, 10);
+  const ok = await checkHealth();
+  if (ok) { loadStats(); loadSources(); loadDatebar(); loadArticles(); }
+}
+
+const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
+
+async function loadDatebar() {
+  try {
+    const daily = await fetch(`${API}/stats/daily?days=14`).then(r => r.json());
+    const countMap = {};
+    daily.forEach(d => { countMap[d.date] = d.count; });
+
+    const bar = document.getElementById('datebar');
+    const today = new Date();
+    const selectedDate = document.getElementById('filterDate').value;
+    let html = '';
+
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const ds = d.toISOString().slice(0, 10);
+      const count = countMap[ds] || 0;
+      const isActive = ds === selectedDate;
+      const month = d.getMonth() + 1;
+      const day = d.getDate();
+      const label = i === 0 ? '今天' : i === 1 ? '昨天' : `${month}/${day}`;
+
+      html += `<div class="date-btn${isActive ? ' active' : ''}" onclick="selectDate('${ds}')">
+        <span class="weekday">周${WEEKDAYS[d.getDay()]}</span>
+        <span class="day">${label}</span>
+        <span class="count">${count} 条</span>
+      </div>`;
+    }
+    bar.innerHTML = html;
+  } catch (e) { console.error('Datebar error:', e); }
+}
+
+function selectDate(ds) {
+  document.getElementById('filterDate').value = ds;
+  loadDatebar();
+  loadArticles();
+}
+
+async function checkHealth() {
+  try {
+    const r = await fetch('/health');
+    const d = await r.json();
+    const ok = d.status === 'ok';
+    document.getElementById('statusDot').className = 'status-dot ' + (ok ? 'ok' : 'err');
+    document.getElementById('statusText').textContent = ok ? '运行中' : '异常';
+    return ok;
+  } catch {
+    document.getElementById('statusDot').className = 'status-dot err';
+    document.getElementById('statusText').textContent = '离线';
+    return false;
+  }
+}
+
+// --- Stats ---
+async function loadStats() {
+  try {
+    const [stats, sources] = await Promise.all([
+      fetch(`${API}/stats`).then(r => r.json()),
+      fetch(`${API}/sources`).then(r => r.json())
+    ]);
+    document.getElementById('statTotal').textContent = stats.total.toLocaleString();
+    document.getElementById('statToday').textContent = stats.today.toLocaleString();
+    document.getElementById('statSources').textContent = sources.length;
+    document.getElementById('statCategories').textContent = Object.keys(stats.categories).length;
+
+    const sel = document.getElementById('filterCategory');
+    sel.innerHTML = '<option value="">全部分类</option>';
+    Object.keys(stats.categories).sort().forEach(c => {
+      sel.innerHTML += `<option value="${c}">${c} (${stats.categories[c]})</option>`;
+    });
+
+    sourceMap = {};
+    sources.forEach(s => { sourceMap[s.id] = s.name; });
+
+    const srcSel = document.getElementById('filterSource');
+    srcSel.innerHTML = '<option value="">全部来源</option>';
+    sources.forEach(s => {
+      srcSel.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+    });
+
+    const grid = document.getElementById('catGrid');
+    grid.innerHTML = '';
+    Object.entries(stats.categories).sort((a, b) => b[1] - a[1]).forEach(([name, count]) => {
+      grid.innerHTML += `<div class="cat-item"><span class="cat-name">${name}</span><span class="cat-count">${count}</span></div>`;
+    });
+    if (Object.keys(stats.categories).length === 0) {
+      grid.innerHTML = '<div class="empty"><p>暂无分类数据</p></div>';
+    }
+  } catch (e) { console.error('Stats error:', e); }
+}
+
+// --- Sources ---
+async function loadSources() {
+  try {
+    const sources = await fetch(`${API}/sources`).then(r => r.json());
+    const tbody = document.getElementById('sourcesBody');
+    if (sources.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty"><p>暂无数据源</p><p style="font-size:13px">点击「+ 添加数据源」添加第一个数据源</p></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = sources.map(s => `<tr>
+      <td><code>${s.id}</code></td>
+      <td>${s.name}</td>
+      <td>${s.region === 'global' ? '国际' : '中国'}</td>
+      <td><span class="badge badge-${s.tier}">${s.tier.toUpperCase()}</span></td>
+      <td>${s.crawler_type}</td>
+      <td>${formatInterval(s.poll_interval_seconds)}</td>
+      <td><span class="${s.enabled ? 'enabled' : 'disabled'}">${s.enabled ? '已启用' : '已禁用'}</span></td>
+    </tr>`).join('');
+  } catch (e) { console.error('Sources error:', e); }
+}
+
+// --- Articles ---
+async function loadArticles(page = 1) {
+  currentPage = page;
+  const params = new URLSearchParams({ page, limit: 20 });
+  const dateVal = document.getElementById('filterDate').value;
+  const cat = document.getElementById('filterCategory').value;
+  const src = document.getElementById('filterSource').value;
+  const imp = document.getElementById('filterImportance').value;
+  if (dateVal) {
+    params.set('since', dateVal + 'T00:00:00');
+    const next = new Date(dateVal);
+    next.setDate(next.getDate() + 1);
+    params.set('until', next.toISOString().slice(0, 10) + 'T00:00:00');
+  }
+  if (cat) params.set('category', cat);
+  if (src) params.set('source_id', src);
+  if (imp) params.set('min_importance', imp);
+
+  try {
+    const data = await fetch(`${API}/articles?${params}`).then(r => r.json());
+    const tbody = document.getElementById('articlesBody');
+    if (data.items.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty"><p>暂无文章</p><p style="font-size:13px">采集器运行后，文章将在此显示</p></div></td></tr>';
+      document.getElementById('articlesPagination').innerHTML = '';
+      return;
+    }
+    tbody.innerHTML = data.items.map(a => `<tr style="cursor:pointer" onclick="showArticle('${a.id}')">
+      <td style="max-width:300px"><a href="${a.url}" target="_blank" onclick="event.stopPropagation()">${esc(a.title)}</a></td>
+      <td style="font-size:12px">${sourceMap[a.source_id] || a.source_id}</td>
+      <td><span class="badge badge-cat">${a.category}</span></td>
+      <td>${(a.tags || []).map(t => `<span class="tag">${t}</span>`).join('')}</td>
+      <td>${scoreBar(a.importance_score)} ${a.importance_score.toFixed(2)}</td>
+      <td style="font-size:12px;color:#888">${a.published_at ? timeAgo(a.published_at) : '-'}</td>
+    </tr>`).join('');
+
+    const pag = document.getElementById('articlesPagination');
+    pag.innerHTML = '';
+    if (page > 1) pag.innerHTML += `<button class="btn btn-ghost" onclick="loadArticles(${page - 1})">上一页</button>`;
+    pag.innerHTML += `<span style="color:#888;font-size:13px">第 ${page} 页</span>`;
+    if (data.items.length === 20) pag.innerHTML += `<button class="btn btn-ghost" onclick="loadArticles(${page + 1})">下一页</button>`;
+  } catch (e) { console.error('Articles error:', e); }
+}
+
+function resetFilters() {
+  document.getElementById('filterDate').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('filterCategory').value = '';
+  document.getElementById('filterSource').value = '';
+  document.getElementById('filterImportance').value = '';
+  loadDatebar();
+  loadArticles();
+}
+
+// --- Hot ---
+async function loadHot() {
+  const hours = document.getElementById('hotHours').value;
+  try {
+    const items = await fetch(`${API}/hot?hours=${hours}&limit=30`).then(r => r.json());
+    const tbody = document.getElementById('hotBody');
+    if (items.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5"><div class="empty"><p>暂无热门文章</p></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = items.map((a, i) => `<tr style="cursor:pointer" onclick="showArticle('${a.id}')">
+      <td style="color:#666">${i + 1}</td>
+      <td><a href="${a.url}" target="_blank" onclick="event.stopPropagation()">${esc(a.title)}</a></td>
+      <td style="font-size:12px">${sourceMap[a.source_id] || a.source_id}</td>
+      <td><span class="badge badge-cat">${a.category}</span></td>
+      <td>${scoreBar(a.importance_score)} ${a.importance_score.toFixed(2)}</td>
+    </tr>`).join('');
+  } catch (e) { console.error('Hot error:', e); }
+}
+
+// --- Article Detail ---
+function formatContent(text) {
+  if (!text) return '<p style="color:#666">（暂无正文）</p>';
+  // Check if content contains HTML tags
+  const hasHtml = /<(p|h[1-6]|ul|ol|blockquote|pre|table|figure|div)\b/i.test(text);
+  if (hasHtml) {
+    return text;
+  }
+  // Check if content is Markdown (from Jina Reader)
+  const hasMd = /^#{1,6}\s|^\*\*|^\- |\!\[|\[.+\]\(.+\)|```/m.test(text);
+  if (hasMd) {
+    return markdownToHtml(text);
+  }
+  // Plain text — escape and format into paragraphs
+  const d = document.createElement('div'); d.textContent = text; let safe = d.innerHTML;
+  let paragraphs = safe.split(/\n{2,}/);
+  if (paragraphs.length <= 1) {
+    paragraphs = safe.split(/\n/).filter(p => p.trim());
+  }
+  if (paragraphs.length <= 1 && safe.length > 200) {
+    const sentences = safe.match(/[^。！？.!?\n]+[。！？.!?\n]+/g) || [safe];
+    paragraphs = [];
+    let buf = '';
+    sentences.forEach((s, i) => {
+      buf += s;
+      if ((i + 1) % 3 === 0 || i === sentences.length - 1) {
+        paragraphs.push(buf.trim());
+        buf = '';
+      }
+    });
+  }
+  return paragraphs.map(p => `<p>${p.trim()}</p>`).join('');
+}
+
+function markdownToHtml(md) {
+  // Escape HTML entities first
+  let html = md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // Code blocks
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) =>
+    `<pre><code>${code.trim()}</code></pre>`);
+  // Inline code
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // Images
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:12px 0">');
+  // Links
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:#6c5ce7">$1</a>');
+  // Headings
+  html = html.replace(/^######\s+(.+)$/gm, '<h6>$1</h6>');
+  html = html.replace(/^#####\s+(.+)$/gm, '<h5>$1</h5>');
+  html = html.replace(/^####\s+(.+)$/gm, '<h4>$1</h4>');
+  html = html.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^##\s+(.+)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^#\s+(.+)$/gm, '<h1>$1</h1>');
+  // Bold and italic
+  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // Horizontal rule
+  html = html.replace(/^---$/gm, '<hr>');
+  // Unordered lists
+  html = html.replace(/^[\-\*]\s+(.+)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`);
+  // Blockquotes
+  html = html.replace(/^>\s+(.+)$/gm, '<blockquote>$1</blockquote>');
+  // Paragraphs: wrap remaining lines
+  html = html.split(/\n{2,}/).map(block => {
+    block = block.trim();
+    if (!block) return '';
+    if (/^<(h[1-6]|ul|ol|pre|blockquote|hr|img)/i.test(block)) return block;
+    return `<p>${block.replace(/\n/g, '<br>')}</p>`;
+  }).join('\n');
+  return html;
+}
+
+async function showArticle(id) {
+  try {
+    const a = await fetch(`${API}/articles/${id}`).then(r => r.json());
+    document.getElementById('modalTitle').textContent = a.title;
+    document.getElementById('modalMeta').innerHTML = [
+      `<span>来源: ${sourceMap[a.source_id] || a.source_id}</span>`,
+      `<span>分类: <span class="badge badge-cat">${a.category}</span></span>`,
+      `<span>评分: ${a.importance_score.toFixed(2)}</span>`,
+      `<span>信号值: ${a.content_signal.toFixed(2)}</span>`,
+      a.author ? `<span>作者: ${esc(a.author)}</span>` : '',
+      a.published_at ? `<span>${new Date(a.published_at).toLocaleString('zh-CN')}</span>` : '',
+    ].filter(Boolean).join('');
+    document.getElementById('modalTags').innerHTML = (a.tags || []).map(t => `<span class="tag">${t}</span>`).join(' ');
+    document.getElementById('modalContent').innerHTML = formatContent(a.content)
+      + `<a class="source-link" href="${a.url}" target="_blank" rel="noopener noreferrer">&#x1F517; 打开原文</a>`;
+    document.getElementById('modal').classList.add('show');
+  } catch (e) { console.error('Detail error:', e); }
+}
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// --- Add Source ---
+async function addSource() {
+  const body = {
+    id: document.getElementById('srcId').value.trim(),
+    name: document.getElementById('srcName').value.trim(),
+    region: document.getElementById('srcRegion').value,
+    tier: document.getElementById('srcTier').value,
+    crawler_type: document.getElementById('srcCrawler').value,
+    poll_interval_seconds: parseInt(document.getElementById('srcInterval').value) || 3600,
+    crawler_config: JSON.parse(document.getElementById('srcConfig').value || '{}'),
+  };
+  if (!body.id || !body.name) { showResult('ID 和名称为必填项', true); return; }
+  try {
+    const r = await fetch(`${API}/sources`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (r.ok) {
+      showResult('添加成功', false);
+      loadSources(); loadStats();
+      document.getElementById('srcId').value = '';
+      document.getElementById('srcName').value = '';
+    } else {
+      const err = await r.json();
+      showResult(err.detail || '添加失败', true);
+    }
+  } catch (e) { showResult('网络错误', true); }
+}
+function showResult(msg, isErr) {
+  const el = document.getElementById('addResult');
+  el.textContent = msg;
+  el.style.color = isErr ? '#e17055' : '#00b894';
+  setTimeout(() => el.textContent = '', 3000);
+}
+
+// --- Tabs ---
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'hot') loadHot();
+    if (tab.dataset.tab === 'sources') loadSources();
+    if (tab.dataset.tab === 'categories') loadStats();
+    if (tab.dataset.tab === 'monitor') loadMonitor();
+    if (tab.dataset.tab === 'x-tokens') loadXTokens();
+    if (tab.dataset.tab === 'apify-keys') loadApifyKeys();
+  });
+});
+
+// --- Monitor ---
+async function loadMonitor() {
+  try {
+    const [pipeline, sources, failed] = await Promise.all([
+      fetch(`${API}/monitor/pipeline`).then(r => r.json()),
+      fetch(`${API}/monitor/sources`).then(r => r.json()),
+      fetch(`${API}/monitor/failed`).then(r => r.json()),
+    ]);
+
+    document.getElementById('monRaw').textContent = pipeline.total_raw.toLocaleString();
+    document.getElementById('monTagged').textContent = pipeline.total_tagged.toLocaleString();
+    document.getElementById('monPending').textContent = pipeline.pending_tagging.toLocaleString();
+    document.getElementById('monRate').textContent = (pipeline.tag_success_rate * 100).toFixed(1) + '%';
+
+    const statusColors = { healthy: 'enabled', stale: 'disabled', no_data: 'disabled' };
+    const statusLabels = { healthy: '正常', stale: '滞后', no_data: '无数据' };
+    document.getElementById('monitorBody').innerHTML = sources.map(s => `<tr>
+      <td>${s.name}</td>
+      <td><span class="badge badge-${s.tier}">${s.tier.toUpperCase()}</span></td>
+      <td>${s.total_articles}</td>
+      <td>${scoreBar(s.tag_rate)} ${(s.tag_rate * 100).toFixed(0)}%</td>
+      <td style="font-size:12px;color:#888">${s.last_crawl ? timeAgo(s.last_crawl) : '从未'}</td>
+      <td><span class="${statusColors[s.status] || ''}">${statusLabels[s.status] || s.status}</span></td>
+    </tr>`).join('');
+
+    document.getElementById('failedBody').innerHTML = failed.length === 0
+      ? '<tr><td colspan="4"><div class="empty"><p>无失败文章</p></div></td></tr>'
+      : failed.map(a => `<tr>
+        <td style="max-width:300px">${esc(a.title)}</td>
+        <td style="font-size:12px">${sourceMap[a.source_id] || a.source_id}</td>
+        <td style="font-size:12px;color:#888">${a.collected_at ? timeAgo(a.collected_at) : '-'}</td>
+        <td><button class="btn btn-ghost" onclick="retryOne('${a.id}')" style="padding:2px 10px;font-size:11px">重试</button></td>
+      </tr>`).join('');
+  } catch (e) { console.error('Monitor error:', e); }
+}
+
+async function retryOne(id) {
+  await fetch(`${API}/monitor/retry/${id}`, { method: 'POST' });
+  setTimeout(loadMonitor, 2000);
+}
+
+async function retryAllFailed() {
+  const r = await fetch(`${API}/monitor/retry-all`, { method: 'POST' });
+  const d = await r.json();
+  alert(`已派发 ${d.count} 个重试任务`);
+  setTimeout(loadMonitor, 3000);
+}
+
+// --- Helpers ---
+function scoreBar(v) {
+  const pct = Math.round(v * 100);
+  const color = v >= 0.7 ? '#00b894' : v >= 0.4 ? '#fdcb6e' : '#e17055';
+  return `<span class="score-bar"><span class="score-fill" style="width:${pct}%;background:${color}"></span></span>`;
+}
+function timeAgo(iso) {
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diff < 60) return '刚刚';
+  if (diff < 3600) return Math.floor(diff / 60) + ' 分钟前';
+  if (diff < 86400) return Math.floor(diff / 3600) + ' 小时前';
+  return Math.floor(diff / 86400) + ' 天前';
+}
+function formatInterval(s) {
+  if (s < 60) return s + ' 秒';
+  if (s < 3600) return Math.floor(s / 60) + ' 分钟';
+  return Math.floor(s / 3600) + ' 小时';
+}
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// --- X Tokens ---
+async function loadXTokens() {
+  try {
+    const tokens = await fetch(`${API}/twitter-cookies`).then(r => r.json());
+    const healthy = tokens.filter(t => t.status === 'healthy').length;
+    const active = tokens.filter(t => t.is_active).length;
+    document.getElementById('xTokenSummary').textContent = `(${healthy} 可用 / ${active} 启用 / ${tokens.length} 总计)`;
+    const tbody = document.getElementById('xTokensBody');
+    if (!tokens.length) {
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty"><p>暂无 Token</p><p style="font-size:13px">添加 X (Twitter) auth_token 以启用推特数据采集</p></div></td></tr>';
+      return;
+    }
+    const xStatusLabel = s => ({healthy:'可用', dead:'失效', untested:'未测试'}[s] || s);
+    const xStatusColor = s => ({healthy:'#00b894', dead:'#e17055', untested:'#888'}[s] || '#888');
+    tbody.innerHTML = tokens.map((t, idx) => `<tr>
+      <td>${idx + 1}</td>
+      <td style="font-family:monospace;font-size:12px">${esc(t.token_preview)}</td>
+      <td>${esc(t.label || '-')}</td>
+      <td><span style="color:${xStatusColor(t.status)};font-weight:500;font-size:12px">${xStatusLabel(t.status)}</span></td>
+      <td style="font-size:12px;color:#888">${t.added_at ? new Date(t.added_at).toLocaleDateString() : '-'}</td>
+      <td style="font-size:12px;color:#888">${t.last_checked_at ? new Date(t.last_checked_at).toLocaleString() : '-'}</td>
+      <td>
+        <button class="btn btn-ghost" onclick="testXToken(${t.id})" style="padding:2px 8px;font-size:11px">检测</button>
+        <button class="btn btn-ghost" onclick="deleteXToken(${t.id})" style="padding:2px 8px;font-size:11px;color:#e17055">删除</button>
+      </td>
+    </tr>`).join('');
+  } catch (e) { console.error('X tokens error:', e); }
+}
+
+async function addXToken() {
+  const token = document.getElementById('xTokenInput').value.trim();
+  const label = document.getElementById('xTokenLabel').value.trim();
+  if (!token) return alert('请粘贴 auth_token');
+  try {
+    const r = await fetch(`${API}/twitter-cookies`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ auth_token: token, label: label || null }) });
+    if (r.ok) {
+      document.getElementById('xTokenInput').value = '';
+      document.getElementById('xTokenLabel').value = '';
+      loadXTokens();
+    } else {
+      const err = await r.json();
+      alert(err.detail || '添加失败');
+    }
+  } catch (e) { alert('请求失败: ' + e.message); }
+}
+
+async function testXToken(id) {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = '检测中...';
+  try {
+    const r = await fetch(`${API}/twitter-cookies/test/${id}`, { method: 'POST' });
+    const data = await r.json();
+    const color = data.status === 'healthy' ? '#00b894' : '#e17055';
+    const icon = data.status === 'healthy' ? '✓' : '✗';
+    document.getElementById('xApplyResult').innerHTML = `<span style="color:${color}">${icon} Token #${id}: ${data.detail}</span>`;
+  } catch (e) {
+    document.getElementById('xApplyResult').innerHTML = `<span style="color:#e17055">检测请求失败: ${e.message}</span>`;
+  }
+  btn.disabled = false;
+  btn.textContent = '检测';
+  loadXTokens();
+}
+
+async function deleteXToken(id) {
+  if (!confirm('确认删除此 Token？')) return;
+  await fetch(`${API}/twitter-cookies/${id}`, { method: 'DELETE' });
+  loadXTokens();
+}
+
+async function applyXTokens() {
+  const btn = document.getElementById('applyBtn');
+  const result = document.getElementById('xApplyResult');
+  btn.disabled = true;
+  btn.textContent = '正在应用...';
+  result.innerHTML = '<span style="color:#f0c040">正在推送 Token 到 RSSHub 并重启，请稍候（约 10 秒）...</span>';
+  try {
+    const r = await fetch(`${API}/twitter-cookies/apply`, { method: 'POST' });
+    const data = await r.json();
+    if (r.ok) {
+      const color = data.health === 'healthy' ? '#00b894' : '#e17055';
+      result.innerHTML = `<span style="color:${color}">应用完成 — 活跃 Token: ${data.active_cookies}，RSSHub 重启: ${data.rsshub_restarted ? '成功' : '失败'}，健康检测: ${data.health}</span>`;
+    } else {
+      result.innerHTML = `<span style="color:#e17055">失败: ${data.detail || JSON.stringify(data)}</span>`;
+    }
+  } catch (e) {
+    result.innerHTML = `<span style="color:#e17055">请求失败: ${e.message}</span>`;
+  }
+  btn.disabled = false;
+  btn.textContent = '应用并重启 RSSHub';
+  loadXTokens();
+}
+
+// --- Apify Keys ---
+async function loadApifyKeys() {
+  try {
+    const keys = await fetch(`${API}/apify-keys`).then(r => r.json());
+    const healthy = keys.filter(k => k.status === 'healthy').length;
+    const active = keys.filter(k => k.is_active).length;
+    document.getElementById('apifyKeySummary').textContent = `(${healthy} 可用 / ${active} 启用 / ${keys.length} 总计)`;
+
+    const tbody = document.getElementById('apifyKeysBody');
+    if (keys.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty"><p>暂无 API Key</p><p style="font-size:13px">添加 Apify API Key 以启用 Twitter 采集</p></div></td></tr>';
+      return;
+    }
+    const statusColor = s => ({healthy:'#00b894', dead:'#e17055', quota_exceeded:'#e17055', untested:'#888'}[s] || '#888');
+    const statusLabel = s => ({healthy:'可用', dead:'失效', quota_exceeded:'额度耗尽', untested:'未测试'}[s] || s);
+    tbody.innerHTML = keys.map((k, idx) => `<tr>
+      <td>${idx + 1}</td>
+      <td><code style="font-size:12px">${k.key_preview}</code></td>
+      <td style="font-size:12px;color:#888">${k.label || '-'}</td>
+      <td><span style="color:${statusColor(k.status)};font-weight:500;font-size:12px">${statusLabel(k.status)}</span></td>
+      <td style="font-size:12px;color:#888">${k.last_used_at ? timeAgo(k.last_used_at) : '从未'}</td>
+      <td style="font-size:12px;color:#888">${k.added_at ? timeAgo(k.added_at) : '-'}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-ghost" onclick="testApifyKey(${k.id})" style="padding:2px 8px;font-size:11px">测试</button>
+        <button class="btn btn-ghost" onclick="toggleApifyKey(${k.id},${!k.is_active})" style="padding:2px 8px;font-size:11px">${k.is_active ? '禁用' : '启用'}</button>
+        <button class="btn btn-ghost" onclick="deleteApifyKey(${k.id})" style="padding:2px 8px;font-size:11px;color:#e17055">删除</button>
+      </td>
+    </tr>`).join('');
+  } catch (e) { console.error('Apify keys error:', e); }
+}
+
+async function addApifyKey() {
+  const key = document.getElementById('apifyKeyInput').value.trim();
+  const label = document.getElementById('apifyKeyLabel').value.trim();
+  if (!key) return;
+  try {
+    const r = await fetch(`${API}/apify-keys`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ api_key: key, label: label || null }) });
+    if (r.ok) {
+      document.getElementById('apifyKeyInput').value = '';
+      document.getElementById('apifyKeyLabel').value = '';
+      loadApifyKeys();
+    } else {
+      const err = await r.json();
+      alert(err.detail || '添加失败');
+    }
+  } catch (e) { alert('网络错误'); }
+}
+
+async function batchAddApifyKeys() {
+  const text = document.getElementById('apifyKeyBatch').value.trim();
+  if (!text) return;
+  const keys = text.split('\n').map(l => l.trim()).filter(Boolean);
+  if (keys.length === 0) return;
+  try {
+    const r = await fetch(`${API}/apify-keys/batch`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ api_keys: keys }) });
+    const d = await r.json();
+    const el = document.getElementById('apifyBatchResult');
+    el.textContent = `添加 ${d.added} 个，跳过 ${d.skipped} 个`;
+    el.style.color = '#00b894';
+    document.getElementById('apifyKeyBatch').value = '';
+    loadApifyKeys();
+    setTimeout(() => el.textContent = '', 4000);
+  } catch (e) { alert('网络错误'); }
+}
+
+async function testApifyKey(id) {
+  const el = document.getElementById('apifyTestResult');
+  el.innerHTML = '<span style="color:#f0c040">测试中...</span>';
+  const r = await fetch(`${API}/apify-keys/test/${id}`, { method: 'POST' });
+  const d = await r.json();
+  const color = d.status === 'healthy' ? '#00b894' : '#e17055';
+  const icon = d.status === 'healthy' ? '✓' : '✗';
+  const msg = d.status === 'healthy'
+    ? `${icon} 可用 — 账号: ${d.username}, 月用量: $${(d.monthly_usage_usd||0).toFixed(2)}`
+    : d.status === 'quota_exceeded'
+    ? `${icon} 额度耗尽 — 账号: ${d.username}, 月用量: $${(d.monthly_usage_usd||0).toFixed(2)}`
+    : `${icon} 失效 — ${d.error || 'HTTP ' + d.http_code}`;
+  el.innerHTML = `<span style="color:${color}">${msg}</span>`;
+  loadApifyKeys();
+}
+
+async function testAllApifyKeys() {
+  const el = document.getElementById('apifyTestResult');
+  el.innerHTML = '<span style="color:#f0c040">正在测试全部 Key...</span>';
+  const r = await fetch(`${API}/apify-keys/test-all`, { method: 'POST' });
+  const d = await r.json();
+  const color = d.dead === 0 ? '#00b894' : '#f0c040';
+  el.innerHTML = `<span style="color:${color}">测试完成: ${d.healthy} 可用, ${d.dead} 失效 (共 ${d.total})</span>`;
+  loadApifyKeys();
+}
+
+async function toggleApifyKey(id, active) {
+  await fetch(`${API}/apify-keys/${id}?active=${active}`, { method: 'PATCH' });
+  loadApifyKeys();
+}
+
+async function deleteApifyKey(id) {
+  if (!confirm('确定删除此 Key？')) return;
+  await fetch(`${API}/apify-keys/${id}`, { method: 'DELETE' });
+  loadApifyKeys();
+}
+
+init();
+</script>
+</body>
+</html>

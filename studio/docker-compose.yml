@@ -1,0 +1,84 @@
+services:
+  studio-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: studio
+      POSTGRES_PASSWORD: studio
+      POSTGRES_DB: studio
+      TZ: Asia/Shanghai
+      PGTZ: Asia/Shanghai
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studio"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  studio-api:
+    build: .
+    command: uvicorn studio.main:app --host 0.0.0.0 --port 8001 --reload
+    volumes:
+      - ./src:/app/src
+    ports:
+      - "8001:8001"
+    env_file: .env
+    environment:
+      TZ: Asia/Shanghai
+      DATABASE_URL: postgresql+asyncpg://studio:studio@studio-postgres:5432/studio
+      DATABASE_URL_SYNC: postgresql+psycopg2://studio:studio@studio-postgres:5432/studio
+      MINE_API_URL: http://mine-api:8000/mine/v1
+    depends_on:
+      studio-postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - default
+      - mine_network
+
+  web:
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3010/api/v1
+    depends_on:
+      - studio-api
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "3010:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - studio-api
+      - web
+
+volumes:
+  pgdata:
+  qdrant_data:
+
+networks:
+  mine_network:
+    external: true
+    name: mine_default
