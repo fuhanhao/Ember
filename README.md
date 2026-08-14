@@ -5,7 +5,7 @@
 ## 项目结构
 
 ```
-3FORGE/
+Ember/
 ├── mine/     # 内容聚合引擎（采集、清洗、AI 标注、定时任务）
 └── studio/   # 工作台（FastAPI 后端 + Next.js 前端）
     └── web/  # Next.js 16 前端（Ember 界面）
@@ -104,7 +104,3 @@ graph LR
 
 - mine：Python / FastAPI / Celery / PostgreSQL / Redis / RSSHub
 - studio：Python / FastAPI / Qdrant / Celery + Next.js 16 / React 19 / Tailwind CSS 4
-
-## License
-
-品牌名 Ember（原项目 FORGE），克隆自 [PLA-yi/FORGE](https://github.com/PLA-yi/FORGE)，本地改造使用，请遵循上游仓库许可。
