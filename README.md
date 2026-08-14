@@ -25,8 +25,8 @@ cp .env.example .env
 docker compose up -d
 ```
 
-- mine：API `http://localhost:8000`、RSSHub `http://localhost:1200`、nginx `http://localhost:80`
-- studio：前端 `http://localhost:3010`、API `http://localhost:8001`、Qdrant `http://localhost:6333`
+- mine：API、RSSHub、nginx（Docker Compose 启动）
+- studio：前端、API、Qdrant（Docker Compose 启动）
 
 首次启动后需建表（上游未提供迁移脚本）：
 
@@ -40,7 +40,7 @@ cd ../mine && docker compose exec mine-api python -c "from sqlalchemy import cre
 ```bash
 cd studio/web
 npm install
-npm run dev      # http://localhost:3000
+npm run dev
 ```
 
 ## 数据源配置
@@ -85,8 +85,8 @@ docker compose -f mine/docker-compose.yml exec mine-worker \
 graph LR
   A[数据源: HN/HF/GitHub/Twitter/YouTube] -->|爬虫| B[(mine Postgres)]
   B -->|Celery 打标| C[TaggedArticle]
-  C -->|mine API :8000| D[studio API :8001]
-  D -->|/feed| E[Ember 网站 :3010]
+  C -->|mine API| D[studio API]
+  D -->|/feed| E[Ember 网站]
 ```
 
 生产构建：`npm run build && npm run start`
